@@ -1,0 +1,38 @@
+package org.project.springsecurity.auth.service;
+
+import lombok.RequiredArgsConstructor;
+import org.project.springsecurity.auth.model.entity.UserEntity;
+import org.project.springsecurity.auth.model.request.ChangePasswordReq;
+import org.project.springsecurity.auth.repository.UserRepo;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.security.Principal;
+
+@Service
+@RequiredArgsConstructor
+public class AuthServiceImpl implements AuthService{
+    private final PasswordEncoder passwordEncoder;
+    private final UserRepo userRepo;
+
+    @Override
+    public void changePassword(ChangePasswordReq request, Principal connectedUser) {
+        var user = (UserEntity) ((UsernamePasswordAuthenticationToken) connectedUser).getPrincipal();
+
+        // check if the current password is correct
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalStateException("Wrong password");
+        }
+        // check if the two new passwords are the same
+        if (!request.getNewPassword().equals(request.getConfirmationPassword())) {
+            throw new IllegalStateException("Password are not the same");
+        }
+
+        // update the password
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+
+        // save the new password
+        userRepo.saveAndFlush(user);
+    }
+}
